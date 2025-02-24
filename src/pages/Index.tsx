@@ -85,6 +85,9 @@ export default function Index() {
 
   const selectedDimensions = visaDimensions.find(d => d.country === selectedCountry);
 
+  // Group countries by region
+  const regions = ["Americas", "Europe", "Asia", "Africa", "Middle East"];
+
   return (
     <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-5xl mx-auto space-y-8">
@@ -151,7 +154,7 @@ export default function Index() {
                     <Command>
                       <CommandInput placeholder="Search for a country..." />
                       <CommandEmpty>No country found.</CommandEmpty>
-                      {["Americas", "Europe", "Asia", "Africa", "Middle East"].map((region) => (
+                      {regions.map((region) => (
                         <CommandGroup key={region} heading={region}>
                           {visaDimensions
                             .filter((dim) => dim.region === region)
