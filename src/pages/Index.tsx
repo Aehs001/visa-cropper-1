@@ -1,24 +1,20 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { visaDimensions } from '@/config/visaDimensions';
 import { cropImage } from '@/utils/imageProcessing';
-import { UploadCloud, Download, Image as ImageIcon } from 'lucide-react';
+import { UploadCloud, Download, Image as ImageIcon, Search } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export default function Index() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles?.length > 0) {
@@ -87,29 +83,32 @@ export default function Index() {
     toast.success('Image downloaded successfully');
   };
 
+  const selectedDimensions = visaDimensions.find(d => d.country === selectedCountry);
+
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-b from-gray-50 to-gray-100">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-5xl mx-auto space-y-8">
+        <div className="text-center space-y-3">
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Visa Photo Cropper
           </h1>
-          <p className="text-gray-600">
-            Upload your photo and select a country to get properly sized visa photos
+          <p className="text-gray-600 text-lg">
+            Create perfectly sized visa photos for any country
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <div 
               {...getRootProps()} 
-              className={`dropzone ${isDragActive ? 'border-primary' : ''}`}
+              className={`dropzone group ${isDragActive ? 'border-primary ring-2 ring-primary/20' : ''} 
+              hover:border-primary/70 hover:bg-secondary/80 transition-all duration-300`}
             >
               <input {...getInputProps()} />
-              <div className="text-center p-6 space-y-4">
-                <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
-                <div className="space-y-1">
-                  <p className="text-gray-600">
+              <div className="text-center p-8 space-y-4">
+                <UploadCloud className="mx-auto h-12 w-12 text-gray-400 group-hover:text-primary/70 transition-colors" />
+                <div className="space-y-2">
+                  <p className="text-gray-600 font-medium">
                     {isDragActive ? 
                       'Drop your image here' : 
                       'Drag & drop your image here'}
@@ -122,37 +121,66 @@ export default function Index() {
             </div>
 
             {originalImage && (
-              <div className="preview-container aspect-square">
+              <div className="preview-container aspect-square bg-white p-4 rounded-xl shadow-sm">
                 <img
                   src={originalImage}
                   alt="Original"
-                  className="rounded-lg"
+                  className="rounded-lg max-h-[500px] mx-auto"
                 />
               </div>
             )}
           </div>
 
           <div className="space-y-6">
-            <div className="glass-panel rounded-lg p-6 space-y-6">
-              <div className="space-y-2">
+            <div className="glass-panel rounded-xl p-6 space-y-6">
+              <div className="space-y-3">
                 <label className="text-sm font-medium text-gray-700">
                   Select Country
                 </label>
-                <Select
-                  value={selectedCountry}
-                  onValueChange={setSelectedCountry}
+                <Button 
+                  variant="outline" 
+                  onClick={() => setOpen(true)}
+                  className="w-full justify-between"
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choose a country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {visaDimensions.map((dim) => (
-                      <SelectItem key={dim.country} value={dim.country}>
-                        {dim.country} - {dim.description}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {selectedCountry || "Search for a country..."}
+                  <Search className="ml-2 h-4 w-4" />
+                </Button>
+
+                <Dialog open={open} onOpenChange={setOpen}>
+                  <DialogContent className="max-w-[500px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search for a country..." />
+                      <CommandEmpty>No country found.</CommandEmpty>
+                      {["Americas", "Europe", "Asia", "Africa", "Middle East"].map((region) => (
+                        <CommandGroup key={region} heading={region}>
+                          {visaDimensions
+                            .filter((dim) => dim.region === region)
+                            .map((dim) => (
+                              <CommandItem
+                                key={dim.country}
+                                onSelect={() => {
+                                  setSelectedCountry(dim.country);
+                                  setOpen(false);
+                                }}
+                              >
+                                {dim.country}
+                                <span className="ml-2 text-xs text-gray-500">
+                                  {dim.description}
+                                </span>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      ))}
+                    </Command>
+                  </DialogContent>
+                </Dialog>
+
+                {selectedDimensions && (
+                  <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700">
+                    <p className="font-medium">{selectedDimensions.country} Visa Photo Requirements:</p>
+                    <p>{selectedDimensions.description}</p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -167,11 +195,11 @@ export default function Index() {
 
                 {croppedImage && (
                   <>
-                    <div className="preview-container">
+                    <div className="preview-container bg-white p-4 rounded-xl">
                       <img
                         src={croppedImage}
                         alt="Cropped"
-                        className="rounded-lg"
+                        className="rounded-lg max-h-[500px] mx-auto"
                       />
                     </div>
                     <Button
@@ -180,7 +208,7 @@ export default function Index() {
                       className="w-full"
                     >
                       <Download className="mr-2 h-4 w-4" />
-                      Download
+                      Download Photo
                     </Button>
                   </>
                 )}
