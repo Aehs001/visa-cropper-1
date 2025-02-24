@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { visaDimensions } from '@/config/visaDimensions';
 import { cropImage } from '@/utils/imageProcessing';
 import { UploadCloud, Download, Image as ImageIcon, Search } from 'lucide-react';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export default function Index() {
@@ -154,27 +154,29 @@ export default function Index() {
                     <DialogTitle className="sr-only">Search Countries</DialogTitle>
                     <Command>
                       <CommandInput placeholder="Search for a country..." />
-                      <CommandEmpty>No country found.</CommandEmpty>
-                      {regions.map((region) => (
-                        <CommandGroup key={region} heading={region}>
-                          {visaDimensions
-                            .filter((dim) => dim.region === region)
-                            .map((dim) => (
-                              <CommandItem
-                                key={dim.country}
-                                onSelect={() => {
-                                  setSelectedCountry(dim.country);
-                                  setOpen(false);
-                                }}
-                              >
-                                {dim.country}
-                                <span className="ml-2 text-xs text-gray-500">
-                                  {dim.description}
-                                </span>
-                              </CommandItem>
-                            ))}
-                        </CommandGroup>
-                      ))}
+                      <CommandList>
+                        <CommandEmpty>No country found.</CommandEmpty>
+                        {regions.map((region) => (
+                          <CommandGroup key={region} heading={region}>
+                            {visaDimensions
+                              .filter((dim) => dim.region === region)
+                              .map((dim) => (
+                                <CommandItem
+                                  key={dim.country}
+                                  onSelect={() => {
+                                    setSelectedCountry(dim.country);
+                                    setOpen(false);
+                                  }}
+                                >
+                                  {dim.country}
+                                  <span className="ml-2 text-xs text-gray-500">
+                                    {dim.description}
+                                  </span>
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        ))}
+                      </CommandList>
                     </Command>
                   </DialogContent>
                 </Dialog>
@@ -224,4 +226,3 @@ export default function Index() {
     </div>
   );
 }
-
