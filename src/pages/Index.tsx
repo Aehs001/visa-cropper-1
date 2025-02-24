@@ -1,13 +1,13 @@
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { visaDimensions } from '@/config/visaDimensions';
 import { cropImage } from '@/utils/imageProcessing';
-import { UploadCloud, Download, Image as ImageIcon, Search } from 'lucide-react';
+import { UploadCloud, Download, Image as ImageIcon, Search, Lock } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Index() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -15,6 +15,68 @@ export default function Index() {
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [open, setOpen] = useState(false);
+  const [hasPaid, setHasPaid] = useState<boolean>(false);
+  const [isLoadingPayment, setIsLoadingPayment] = useState(false);
+
+  useEffect(() => {
+    const checkPaymentStatus = async () => {
+      const session = supabase.auth.session();
+      if (!session) return;
+
+      const { data } = await supabase
+        .from('user_payments')
+        .select('has_paid')
+        .eq('user_id', session.user.id)
+        .single();
+
+      setHasPaid(!!data?.has_paid);
+    };
+
+    checkPaymentStatus();
+
+    // Check for successful Stripe redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    if (sessionId) {
+      verifyPayment(sessionId);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  const verifyPayment = async (sessionId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-payment', {
+        body: { sessionId }
+      });
+
+      if (error) throw error;
+      if (data.success) {
+        setHasPaid(true);
+        toast.success('Thank you for your purchase! You now have lifetime access.');
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      toast.error('Failed to verify payment. Please contact support.');
+    }
+  };
+
+  const handlePayment = async () => {
+    setIsLoadingPayment(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {});
+      
+      if (error) throw error;
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      toast.error('Failed to initialize payment. Please try again.');
+    } finally {
+      setIsLoadingPayment(false);
+    }
+  };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles?.length > 0) {
@@ -74,6 +136,11 @@ export default function Index() {
   const handleDownload = () => {
     if (!croppedImage) return;
     
+    if (!hasPaid) {
+      toast.error('Please purchase lifetime access to download photos');
+      return;
+    }
+    
     const link = document.createElement('a');
     link.href = croppedImage;
     link.download = `visa-photo-${selectedCountry.toLowerCase()}.jpg`;
@@ -96,10 +163,24 @@ export default function Index() {
           <p className="text-lg text-gray-600/90 max-w-2xl mx-auto">
             Create perfectly sized visa photos that meet official requirements for any country
           </p>
+          {!hasPaid && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-blue-800">
+                Unlock lifetime access to photo downloads for just $1
+              </p>
+              <Button
+                onClick={handlePayment}
+                disabled={isLoadingPayment}
+                variant="default"
+                className="mt-2"
+              >
+                {isLoadingPayment ? 'Processing...' : 'Purchase Lifetime Access'}
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-2 gap-10">
-          {/* Left Column - Upload and Original Image */}
           <div className="space-y-8">
             <div 
               {...getRootProps()} 
@@ -137,7 +218,6 @@ export default function Index() {
             )}
           </div>
 
-          {/* Right Column - Controls and Cropped Image */}
           <div className="space-y-8">
             <div className="glass-panel rounded-2xl p-8 bg-white/80 backdrop-blur-sm border border-gray-100 shadow-xl shadow-gray-100/20">
               <div className="space-y-6">
@@ -221,10 +301,18 @@ export default function Index() {
                       <Button
                         onClick={handleDownload}
                         variant="secondary"
-                        className="w-full py-6 text-base font-medium bg-gray-900 text-white hover:bg-gray-800"
+                        className={`w-full py-6 text-base font-medium ${
+                          hasPaid 
+                            ? 'bg-gray-900 text-white hover:bg-gray-800' 
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
                       >
-                        <Download className="mr-2 h-5 w-5" />
-                        Download Photo
+                        {hasPaid ? (
+                          <Download className="mr-2 h-5 w-5" />
+                        ) : (
+                          <Lock className="mr-2 h-5 w-5" />
+                        )}
+                        {hasPaid ? 'Download Photo' : 'Purchase to Download'}
                       </Button>
                     </div>
                   )}
