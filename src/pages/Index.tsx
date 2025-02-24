@@ -7,7 +7,7 @@ import { visaDimensions } from '@/config/visaDimensions';
 import { cropImage } from '@/utils/imageProcessing';
 import { UploadCloud, Download, Image as ImageIcon, Search } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export default function Index() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -151,6 +151,7 @@ export default function Index() {
 
                 <Dialog open={open} onOpenChange={setOpen}>
                   <DialogContent className="max-w-[500px] p-0">
+                    <DialogTitle className="sr-only">Search Countries</DialogTitle>
                     <Command>
                       <CommandInput placeholder="Search for a country..." />
                       <CommandEmpty>No country found.</CommandEmpty>
@@ -223,3 +224,4 @@ export default function Index() {
     </div>
   );
 }
+
