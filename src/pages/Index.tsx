@@ -84,37 +84,35 @@ export default function Index() {
   };
 
   const selectedDimensions = visaDimensions.find(d => d.country === selectedCountry);
-
-  // Group countries by region
   const regions = ["Americas", "Europe", "Asia", "Africa", "Middle East"];
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div className="text-center space-y-3">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50/50 via-white to-blue-50/30">
+      <div className="max-w-6xl mx-auto p-6 md:p-8 lg:p-12 space-y-12">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
             Visa Photo Cropper
           </h1>
-          <p className="text-gray-600 text-lg">
-            Create perfectly sized visa photos for any country
+          <p className="text-lg text-gray-600/90 max-w-2xl mx-auto">
+            Create perfectly sized visa photos that meet official requirements for any country
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          <div className="space-y-6">
+        <div className="grid lg:grid-cols-2 gap-10">
+          {/* Left Column - Upload and Original Image */}
+          <div className="space-y-8">
             <div 
               {...getRootProps()} 
-              className={`dropzone group ${isDragActive ? 'border-primary ring-2 ring-primary/20' : ''} 
-              hover:border-primary/70 hover:bg-secondary/80 transition-all duration-300`}
+              className={`dropzone group relative overflow-hidden ${
+                isDragActive ? 'ring-2 ring-blue-400 border-blue-400' : ''
+              } hover:border-blue-400/70 hover:bg-blue-50/50 transition-all duration-300 rounded-2xl border-2 border-dashed border-gray-200`}
             >
               <input {...getInputProps()} />
-              <div className="text-center p-8 space-y-4">
-                <UploadCloud className="mx-auto h-12 w-12 text-gray-400 group-hover:text-primary/70 transition-colors" />
+              <div className="text-center p-10 space-y-4">
+                <UploadCloud className="mx-auto h-14 w-14 text-gray-400 group-hover:text-blue-500/70 transition-colors" />
                 <div className="space-y-2">
-                  <p className="text-gray-600 font-medium">
-                    {isDragActive ? 
-                      'Drop your image here' : 
-                      'Drag & drop your image here'}
+                  <p className="text-gray-700 font-medium">
+                    {isDragActive ? 'Drop your image here' : 'Drag & drop your image here'}
                   </p>
                   <p className="text-sm text-gray-500">
                     or click to select a file
@@ -124,100 +122,113 @@ export default function Index() {
             </div>
 
             {originalImage && (
-              <div className="preview-container aspect-square bg-white p-4 rounded-xl shadow-sm">
-                <img
-                  src={originalImage}
-                  alt="Original"
-                  className="rounded-lg max-h-[500px] mx-auto"
-                />
+              <div className="preview-container overflow-hidden rounded-2xl bg-white shadow-lg border border-gray-100">
+                <div className="p-4 border-b border-gray-100">
+                  <h3 className="text-sm font-medium text-gray-700">Original Image</h3>
+                </div>
+                <div className="p-6">
+                  <img
+                    src={originalImage}
+                    alt="Original"
+                    className="rounded-lg max-h-[500px] mx-auto"
+                  />
+                </div>
               </div>
             )}
           </div>
 
-          <div className="space-y-6">
-            <div className="glass-panel rounded-xl p-6 space-y-6">
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-700">
-                  Select Country
-                </label>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setOpen(true)}
-                  className="w-full justify-between"
-                >
-                  {selectedCountry || "Search for a country..."}
-                  <Search className="ml-2 h-4 w-4" />
-                </Button>
+          {/* Right Column - Controls and Cropped Image */}
+          <div className="space-y-8">
+            <div className="glass-panel rounded-2xl p-8 bg-white/80 backdrop-blur-sm border border-gray-100 shadow-xl shadow-gray-100/20">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-700">
+                    Select Country
+                  </label>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setOpen(true)}
+                    className="w-full justify-between bg-white hover:bg-gray-50/80"
+                  >
+                    {selectedCountry || "Search for a country..."}
+                    <Search className="ml-2 h-4 w-4 text-gray-500" />
+                  </Button>
 
-                <Dialog open={open} onOpenChange={setOpen}>
-                  <DialogContent className="max-w-[500px] p-0">
-                    <DialogTitle className="sr-only">Search Countries</DialogTitle>
-                    <Command>
-                      <CommandInput placeholder="Search for a country..." />
-                      <CommandList>
-                        <CommandEmpty>No country found.</CommandEmpty>
-                        {regions.map((region) => (
-                          <CommandGroup key={region} heading={region}>
-                            {visaDimensions
-                              .filter((dim) => dim.region === region)
-                              .map((dim) => (
-                                <CommandItem
-                                  key={dim.country}
-                                  onSelect={() => {
-                                    setSelectedCountry(dim.country);
-                                    setOpen(false);
-                                  }}
-                                >
-                                  {dim.country}
-                                  <span className="ml-2 text-xs text-gray-500">
-                                    {dim.description}
-                                  </span>
-                                </CommandItem>
-                              ))}
-                          </CommandGroup>
-                        ))}
-                      </CommandList>
-                    </Command>
-                  </DialogContent>
-                </Dialog>
+                  <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogContent className="max-w-[500px] p-0">
+                      <DialogTitle className="sr-only">Search Countries</DialogTitle>
+                      <Command className="rounded-lg border-none">
+                        <CommandInput placeholder="Search for a country..." />
+                        <CommandList>
+                          <CommandEmpty>No country found.</CommandEmpty>
+                          {regions.map((region) => (
+                            <CommandGroup key={region} heading={region}>
+                              {visaDimensions
+                                .filter((dim) => dim.region === region)
+                                .map((dim) => (
+                                  <CommandItem
+                                    key={dim.country}
+                                    onSelect={() => {
+                                      setSelectedCountry(dim.country);
+                                      setOpen(false);
+                                    }}
+                                  >
+                                    {dim.country}
+                                    <span className="ml-2 text-xs text-gray-500">
+                                      {dim.description}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          ))}
+                        </CommandList>
+                      </Command>
+                    </DialogContent>
+                  </Dialog>
 
-                {selectedDimensions && (
-                  <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-700">
-                    <p className="font-medium">{selectedDimensions.country} Visa Photo Requirements:</p>
-                    <p>{selectedDimensions.description}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <Button
-                  onClick={handleCrop}
-                  disabled={!originalImage || !selectedCountry || isProcessing}
-                  className="w-full"
-                >
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                  {isProcessing ? 'Processing...' : 'Crop Image'}
-                </Button>
-
-                {croppedImage && (
-                  <>
-                    <div className="preview-container bg-white p-4 rounded-xl">
-                      <img
-                        src={croppedImage}
-                        alt="Cropped"
-                        className="rounded-lg max-h-[500px] mx-auto"
-                      />
+                  {selectedDimensions && (
+                    <div className="rounded-xl bg-blue-50/50 p-4 text-sm text-blue-800 border border-blue-100">
+                      <p className="font-medium mb-1">{selectedDimensions.country} Visa Photo Requirements:</p>
+                      <p className="text-blue-700/90">{selectedDimensions.description}</p>
                     </div>
-                    <Button
-                      onClick={handleDownload}
-                      variant="secondary"
-                      className="w-full"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Photo
-                    </Button>
-                  </>
-                )}
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  <Button
+                    onClick={handleCrop}
+                    disabled={!originalImage || !selectedCountry || isProcessing}
+                    className="w-full py-6 text-base font-medium"
+                  >
+                    <ImageIcon className="mr-2 h-5 w-5" />
+                    {isProcessing ? 'Processing...' : 'Crop Image'}
+                  </Button>
+
+                  {croppedImage && (
+                    <div className="space-y-6">
+                      <div className="preview-container rounded-2xl bg-white shadow-lg border border-gray-100">
+                        <div className="p-4 border-b border-gray-100">
+                          <h3 className="text-sm font-medium text-gray-700">Cropped Image</h3>
+                        </div>
+                        <div className="p-6">
+                          <img
+                            src={croppedImage}
+                            alt="Cropped"
+                            className="rounded-lg max-h-[500px] mx-auto"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleDownload}
+                        variant="secondary"
+                        className="w-full py-6 text-base font-medium bg-gray-900 text-white hover:bg-gray-800"
+                      >
+                        <Download className="mr-2 h-5 w-5" />
+                        Download Photo
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
