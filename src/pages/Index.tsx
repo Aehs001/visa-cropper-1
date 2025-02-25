@@ -130,6 +130,46 @@ export default function Index() {
     toast.success('Image downloaded successfully');
   };
 
+  const getRequirementsTable = () => {
+    if (!selectedCountry || !croppedImage) return null;
+    
+    const dimensions = visaDimensions.find(d => d.country === selectedCountry);
+    if (!dimensions) return null;
+
+    return (
+      <div className="requirements-table mt-6 border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <tbody className="divide-y">
+            <tr className="bg-gray-50">
+              <td className="px-4 py-3 font-medium">Country</td>
+              <td className="px-4 py-3">{dimensions.country}</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-medium">Document Type</td>
+              <td className="px-4 py-3">Visa Photo</td>
+            </tr>
+            <tr className="bg-gray-50">
+              <td className="px-4 py-3 font-medium">Size</td>
+              <td className="px-4 py-3">Width: {dimensions.width}px, Height: {dimensions.height}px</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-medium">Background color</td>
+              <td className="px-4 py-3">White</td>
+            </tr>
+            <tr className="bg-gray-50">
+              <td className="px-4 py-3 font-medium">File format</td>
+              <td className="px-4 py-3">JPEG</td>
+            </tr>
+            <tr>
+              <td className="px-4 py-3 font-medium">Resolution</td>
+              <td className="px-4 py-3">600 DPI recommended</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   const selectedDimensions = visaDimensions.find(d => d.country === selectedCountry);
   const regions = ["Americas", "Europe", "Asia", "Africa", "Middle East"];
 
@@ -298,7 +338,9 @@ export default function Index() {
                     <div className="space-y-6">
                       <div className="preview-container rounded-2xl bg-white shadow-lg border border-gray-100">
                         <div className="p-4 border-b border-gray-100">
-                          <h3 className="text-sm font-medium text-gray-700">Cropped Image</h3>
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Cropped Image with Guidelines
+                          </h3>
                         </div>
                         <div className="p-6">
                           <img
@@ -306,6 +348,7 @@ export default function Index() {
                             alt="Cropped"
                             className="rounded-lg max-h-[500px] mx-auto"
                           />
+                          {getRequirementsTable()}
                         </div>
                       </div>
                       <Button
