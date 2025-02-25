@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
@@ -85,7 +84,6 @@ export default function Index() {
     }
   };
 
-  // Load preview image when original image changes
   useEffect(() => {
     if (originalImage) {
       const img = new Image();
@@ -317,12 +315,14 @@ export default function Index() {
                     <DialogContent className="max-w-[90vw] w-full">
                       <DialogTitle>Manual Crop</DialogTitle>
                       <div className="space-y-6 p-4">
-                        <div className="relative w-full h-[60vh] overflow-hidden bg-gray-100 rounded-lg"
-                             onMouseDown={handleMouseDown}
-                             onMouseMove={handleMouseMove}
-                             onMouseUp={handleMouseUp}
-                             onMouseLeave={handleMouseUp}
-                             onWheel={handleWheel}>
+                        <div 
+                          className="relative w-full h-[60vh] overflow-hidden bg-gray-100 rounded-lg"
+                          onMouseDown={handleMouseDown}
+                          onMouseMove={handleMouseMove}
+                          onMouseUp={handleMouseUp}
+                          onMouseLeave={handleMouseUp}
+                          onWheel={handleWheel}
+                        >
                           {originalImage && previewImage && selectedDimensions && (
                             <>
                               <img
@@ -336,7 +336,7 @@ export default function Index() {
                                 }}
                               />
                               <div 
-                                className="absolute border-2 border-purple-500 pointer-events-none"
+                                className="absolute pointer-events-none"
                                 style={{
                                   width: `${selectedDimensions.width}px`,
                                   height: `${selectedDimensions.height}px`,
@@ -346,14 +346,23 @@ export default function Index() {
                                   boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)'
                                 }}
                               >
-                                <div className="absolute inset-0 border-4 border-dashed border-white/30" />
+                                <div className="absolute inset-0 border-2 border-blue-500">
+                                  <div className="absolute -left-1 -top-1 w-4 h-4 border-l-4 border-t-4 border-blue-500"></div>
+                                  <div className="absolute -right-1 -top-1 w-4 h-4 border-r-4 border-t-4 border-blue-500"></div>
+                                  <div className="absolute -left-1 -bottom-1 w-4 h-4 border-l-4 border-b-4 border-blue-500"></div>
+                                  <div className="absolute -right-1 -bottom-1 w-4 h-4 border-r-4 border-b-4 border-blue-500"></div>
+                                  <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/70"></div>
+                                  <div className="absolute right-1/3 top-0 bottom-0 w-px bg-white/70"></div>
+                                  <div className="absolute top-1/3 left-0 right-0 h-px bg-white/70"></div>
+                                  <div className="absolute bottom-1/3 left-0 right-0 h-px bg-white/70"></div>
+                                </div>
                               </div>
                             </>
                           )}
                         </div>
                         <div className="space-y-4">
                           <p className="text-sm text-gray-500">
-                            Drag image to position • Scroll to zoom • Overlay shows exact visa photo dimensions
+                            Drag image to position • Scroll to zoom • Grid lines help with composition
                           </p>
                           <Button onClick={() => handleCrop(true)} disabled={isProcessing}>
                             {isProcessing ? 'Processing...' : 'Apply Manual Crop'}
@@ -398,4 +407,3 @@ export default function Index() {
     </div>
   );
 }
-
