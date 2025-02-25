@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ export default function Index() {
   const [manualCropOpen, setManualCropOpen] = useState(false);
   const [cropPosition, setCropPosition] = useState({ x: 0, y: 0, scale: 1 });
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [previewImage, setPreviewImage] = useState<HTMLImageElement | null>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles?.length > 0) {
@@ -83,7 +85,17 @@ export default function Index() {
     }
   };
 
+  // Load preview image when original image changes
+  useEffect(() => {
+    if (originalImage) {
+      const img = new Image();
+      img.onload = () => setPreviewImage(img);
+      img.src = originalImage;
+    }
+  }, [originalImage]);
+
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!previewImage) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setDragStart({
       x: e.clientX - rect.left - cropPosition.x,
@@ -92,7 +104,7 @@ export default function Index() {
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!dragStart) return;
+    if (!dragStart || !previewImage) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left - dragStart.x;
@@ -100,8 +112,8 @@ export default function Index() {
 
     setCropPosition(prev => ({
       ...prev,
-      x: Math.max(Math.min(x, rect.width), -rect.width),
-      y: Math.max(Math.min(y, rect.height), -rect.height)
+      x,
+      y
     }));
   };
 
@@ -111,6 +123,8 @@ export default function Index() {
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (!previewImage) return;
+    
     const scaleDelta = e.deltaY * -0.001;
     setCropPosition(prev => ({
       ...prev,
@@ -303,28 +317,43 @@ export default function Index() {
                     <DialogContent className="max-w-[90vw] w-full">
                       <DialogTitle>Manual Crop</DialogTitle>
                       <div className="space-y-6 p-4">
-                        <div className="relative w-full h-[60vh] overflow-hidden bg-gray-100 rounded-lg cursor-move"
+                        <div className="relative w-full h-[60vh] overflow-hidden bg-gray-100 rounded-lg"
                              onMouseDown={handleMouseDown}
                              onMouseMove={handleMouseMove}
                              onMouseUp={handleMouseUp}
                              onMouseLeave={handleMouseUp}
                              onWheel={handleWheel}>
-                          {originalImage && (
-                            <img
-                              src={originalImage}
-                              alt="Preview"
-                              className="absolute"
-                              style={{
-                                transform: `translate(${cropPosition.x}px, ${cropPosition.y}px) scale(${cropPosition.scale})`,
-                                transformOrigin: 'center',
-                                transition: dragStart ? 'none' : 'transform 0.1s ease-out'
-                              }}
-                            />
+                          {originalImage && previewImage && selectedDimensions && (
+                            <>
+                              <img
+                                src={originalImage}
+                                alt="Preview"
+                                className="absolute cursor-move"
+                                style={{
+                                  transform: `translate(${cropPosition.x}px, ${cropPosition.y}px) scale(${cropPosition.scale})`,
+                                  transformOrigin: 'center',
+                                  transition: dragStart ? 'none' : 'transform 0.1s ease-out'
+                                }}
+                              />
+                              <div 
+                                className="absolute border-2 border-purple-500 pointer-events-none"
+                                style={{
+                                  width: `${selectedDimensions.width}px`,
+                                  height: `${selectedDimensions.height}px`,
+                                  left: '50%',
+                                  top: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)'
+                                }}
+                              >
+                                <div className="absolute inset-0 border-4 border-dashed border-white/30" />
+                              </div>
+                            </>
                           )}
                         </div>
                         <div className="space-y-4">
                           <p className="text-sm text-gray-500">
-                            Drag to position • Scroll to zoom
+                            Drag image to position • Scroll to zoom • Overlay shows exact visa photo dimensions
                           </p>
                           <Button onClick={() => handleCrop(true)} disabled={isProcessing}>
                             {isProcessing ? 'Processing...' : 'Apply Manual Crop'}
@@ -369,3 +398,4 @@ export default function Index() {
     </div>
   );
 }
+
