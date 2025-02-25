@@ -11,6 +11,7 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
 interface CropPosition {
   x: number;
   y: number;
+  scale: number;
 }
 
 export const cropImage = async (
@@ -27,25 +28,6 @@ export const cropImage = async (
     throw new Error('No 2d context');
   }
 
-  // Calculate scaling to maintain aspect ratio
-  const scale = Math.max(width / image.width, height / image.height);
-  const scaledWidth = image.width * scale;
-  const scaledHeight = image.height * scale;
-  
-  // Calculate positioning
-  let x, y;
-  if (manualPosition) {
-    // Convert percentage to actual position
-    const maxX = width - scaledWidth;
-    const maxY = height - scaledHeight;
-    x = (maxX * manualPosition.x) / 100;
-    y = (maxY * manualPosition.y) / 100;
-  } else {
-    // Center the image
-    x = (width - scaledWidth) / 2;
-    y = (height - scaledHeight) / 2;
-  }
-
   canvas.width = width;
   canvas.height = height;
 
@@ -53,7 +35,31 @@ export const cropImage = async (
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
 
-  ctx.drawImage(image, x, y, scaledWidth, scaledHeight);
+  if (manualPosition) {
+    // Use manual position and scale for cropping
+    const scale = manualPosition.scale || 1;
+    const scaledWidth = image.width * scale;
+    const scaledHeight = image.height * scale;
+    ctx.drawImage(
+      image,
+      manualPosition.x,
+      manualPosition.y,
+      scaledWidth,
+      scaledHeight,
+      0,
+      0,
+      width,
+      height
+    );
+  } else {
+    // Calculate scaling to maintain aspect ratio (auto crop)
+    const scale = Math.max(width / image.width, height / image.height);
+    const scaledWidth = image.width * scale;
+    const scaledHeight = image.height * scale;
+    const x = (width - scaledWidth) / 2;
+    const y = (height - scaledHeight) / 2;
+    ctx.drawImage(image, x, y, scaledWidth, scaledHeight);
+  }
 
   return canvas.toDataURL('image/jpeg', 0.95);
 };

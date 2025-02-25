@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,8 @@ export default function Index() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [open, setOpen] = useState(false);
   const [manualCropOpen, setManualCropOpen] = useState(false);
-  const [cropPosition, setCropPosition] = useState({ x: 50, y: 50 }); // Percentage values
+  const [cropPosition, setCropPosition] = useState({ x: 0, y: 0, scale: 1 });
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles?.length > 0) {
@@ -66,7 +66,6 @@ export default function Index() {
         manual ? cropPosition : undefined
       );
       
-      // Verify dimensions
       const { isCorrect, actualWidth, actualHeight } = await verifyDimensions(cropped, dimensions.width, dimensions.height);
       
       if (!isCorrect) {
@@ -82,6 +81,41 @@ export default function Index() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragStart({
+      x: e.clientX - rect.left - cropPosition.x,
+      y: e.clientY - rect.top - cropPosition.y
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragStart) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left - dragStart.x;
+    const y = e.clientY - rect.top - dragStart.y;
+
+    setCropPosition(prev => ({
+      ...prev,
+      x: Math.max(Math.min(x, rect.width), -rect.width),
+      y: Math.max(Math.min(y, rect.height), -rect.height)
+    }));
+  };
+
+  const handleMouseUp = () => {
+    setDragStart(null);
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const scaleDelta = e.deltaY * -0.001;
+    setCropPosition(prev => ({
+      ...prev,
+      scale: Math.max(0.1, Math.min(3, prev.scale + scaleDelta))
+    }));
   };
 
   const handleDownload = () => {
@@ -229,40 +263,33 @@ export default function Index() {
                     <DialogContent className="max-w-[90vw] w-full">
                       <DialogTitle>Manual Crop</DialogTitle>
                       <div className="space-y-6 p-4">
-                        <div className="space-y-4">
-                          <label className="block text-sm font-medium">
-                            Horizontal Position
-                          </label>
-                          <Slider
-                            value={[cropPosition.x]}
-                            onValueChange={(value) => setCropPosition(prev => ({ ...prev, x: value[0] }))}
-                            min={0}
-                            max={100}
-                            step={1}
-                          />
-                          <label className="block text-sm font-medium">
-                            Vertical Position
-                          </label>
-                          <Slider
-                            value={[cropPosition.y]}
-                            onValueChange={(value) => setCropPosition(prev => ({ ...prev, y: value[0] }))}
-                            min={0}
-                            max={100}
-                            step={1}
-                          />
-                        </div>
-                        <div className="relative w-full h-[60vh]">
+                        <div className="relative w-full h-[60vh] overflow-hidden bg-gray-100 rounded-lg cursor-move"
+                             onMouseDown={handleMouseDown}
+                             onMouseMove={handleMouseMove}
+                             onMouseUp={handleMouseUp}
+                             onMouseLeave={handleMouseUp}
+                             onWheel={handleWheel}>
                           {originalImage && (
                             <img
                               src={originalImage}
                               alt="Preview"
-                              className="w-full h-full object-contain"
+                              className="absolute"
+                              style={{
+                                transform: `translate(${cropPosition.x}px, ${cropPosition.y}px) scale(${cropPosition.scale})`,
+                                transformOrigin: 'center',
+                                transition: dragStart ? 'none' : 'transform 0.1s ease-out'
+                              }}
                             />
                           )}
                         </div>
-                        <Button onClick={() => handleCrop(true)} disabled={isProcessing}>
-                          {isProcessing ? 'Processing...' : 'Apply Manual Crop'}
-                        </Button>
+                        <div className="space-y-4">
+                          <p className="text-sm text-gray-500">
+                            Drag to position • Scroll to zoom
+                          </p>
+                          <Button onClick={() => handleCrop(true)} disabled={isProcessing}>
+                            {isProcessing ? 'Processing...' : 'Apply Manual Crop'}
+                          </Button>
+                        </div>
                       </div>
                     </DialogContent>
                   </Dialog>
