@@ -1,13 +1,14 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { visaDimensions } from '@/config/visaDimensions';
-import { cropImage } from '@/utils/imageProcessing';
-import { UploadCloud, Download, Image as ImageIcon, Search, Lock } from 'lucide-react';
+import { cropImage, verifyDimensions } from '@/utils/imageProcessing';
+import { UploadCloud, Download, Image as ImageIcon, Search, Crop } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { Slider } from "@/components/ui/slider";
 
 export default function Index() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -15,68 +16,8 @@ export default function Index() {
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [open, setOpen] = useState(false);
-  const [hasPaid, setHasPaid] = useState<boolean>(false);
-  const [isLoadingPayment, setIsLoadingPayment] = useState(false);
-
-  useEffect(() => {
-    const checkPaymentStatus = async () => {
-      const session = supabase.auth.session();
-      if (!session) return;
-
-      const { data } = await supabase
-        .from('user_payments')
-        .select('has_paid')
-        .eq('user_id', session.user.id)
-        .single();
-
-      setHasPaid(!!data?.has_paid);
-    };
-
-    checkPaymentStatus();
-
-    // Check for successful Stripe redirect
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get('session_id');
-    if (sessionId) {
-      verifyPayment(sessionId);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
-
-  const verifyPayment = async (sessionId: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-payment', {
-        body: { sessionId }
-      });
-
-      if (error) throw error;
-      if (data.success) {
-        setHasPaid(true);
-        toast.success('Thank you for your purchase! You now have lifetime access.');
-      }
-    } catch (error) {
-      console.error('Error verifying payment:', error);
-      toast.error('Failed to verify payment. Please contact support.');
-    }
-  };
-
-  const handlePayment = async () => {
-    setIsLoadingPayment(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-payment', {});
-      
-      if (error) throw error;
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Error creating payment:', error);
-      toast.error('Failed to initialize payment. Please try again.');
-    } finally {
-      setIsLoadingPayment(false);
-    }
-  };
+  const [manualCropOpen, setManualCropOpen] = useState(false);
+  const [cropPosition, setCropPosition] = useState({ x: 50, y: 50 }); // Percentage values
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles?.length > 0) {
@@ -104,7 +45,7 @@ export default function Index() {
     maxFiles: 1
   });
 
-  const handleCrop = async () => {
+  const handleCrop = async (manual = false) => {
     if (!originalImage || !selectedCountry) {
       toast.error('Please select both an image and a country');
       return;
@@ -121,10 +62,20 @@ export default function Index() {
       const cropped = await cropImage(
         originalImage,
         dimensions.width,
-        dimensions.height
+        dimensions.height,
+        manual ? cropPosition : undefined
       );
+      
+      // Verify dimensions
+      const { isCorrect, actualWidth, actualHeight } = await verifyDimensions(cropped, dimensions.width, dimensions.height);
+      
+      if (!isCorrect) {
+        toast.error(`Warning: Cropped image dimensions (${actualWidth}x${actualHeight}) don't match required dimensions (${dimensions.width}x${dimensions.height})`);
+      }
+      
       setCroppedImage(cropped);
       toast.success('Image cropped successfully');
+      if (manual) setManualCropOpen(false);
     } catch (error) {
       toast.error('Failed to crop image');
       console.error(error);
@@ -135,11 +86,6 @@ export default function Index() {
 
   const handleDownload = () => {
     if (!croppedImage) return;
-    
-    if (!hasPaid) {
-      toast.error('Please purchase lifetime access to download photos');
-      return;
-    }
     
     const link = document.createElement('a');
     link.href = croppedImage;
@@ -154,30 +100,15 @@ export default function Index() {
   const regions = ["Americas", "Europe", "Asia", "Africa", "Middle East"];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50/50 via-white to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
       <div className="max-w-6xl mx-auto p-6 md:p-8 lg:p-12 space-y-12">
         <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
             Visa Photo Cropper
           </h1>
           <p className="text-lg text-gray-600/90 max-w-2xl mx-auto">
             Create perfectly sized visa photos that meet official requirements for any country
           </p>
-          {!hasPaid && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-              <p className="text-blue-800">
-                Unlock lifetime access to photo downloads for just $1
-              </p>
-              <Button
-                onClick={handlePayment}
-                disabled={isLoadingPayment}
-                variant="default"
-                className="mt-2"
-              >
-                {isLoadingPayment ? 'Processing...' : 'Purchase Lifetime Access'}
-              </Button>
-            </div>
-          )}
         </div>
 
         <div className="grid lg:grid-cols-2 gap-10">
@@ -185,12 +116,12 @@ export default function Index() {
             <div 
               {...getRootProps()} 
               className={`dropzone group relative overflow-hidden ${
-                isDragActive ? 'ring-2 ring-blue-400 border-blue-400' : ''
-              } hover:border-blue-400/70 hover:bg-blue-50/50 transition-all duration-300 rounded-2xl border-2 border-dashed border-gray-200`}
+                isDragActive ? 'ring-2 ring-purple-400 border-purple-400' : ''
+              } hover:border-purple-400/70 hover:bg-purple-50/50 transition-all duration-300 rounded-2xl border-2 border-dashed border-gray-200`}
             >
               <input {...getInputProps()} />
               <div className="text-center p-10 space-y-4">
-                <UploadCloud className="mx-auto h-14 w-14 text-gray-400 group-hover:text-blue-500/70 transition-colors" />
+                <UploadCloud className="mx-auto h-14 w-14 text-gray-400 group-hover:text-purple-500/70 transition-colors" />
                 <div className="space-y-2">
                   <p className="text-gray-700 font-medium">
                     {isDragActive ? 'Drop your image here' : 'Drag & drop your image here'}
@@ -219,7 +150,7 @@ export default function Index() {
           </div>
 
           <div className="space-y-8">
-            <div className="glass-panel rounded-2xl p-8 bg-white/80 backdrop-blur-sm border border-gray-100 shadow-xl shadow-gray-100/20">
+            <div className="glass-panel rounded-2xl p-8 bg-white/80 backdrop-blur-sm border border-gray-100 shadow-xl shadow-purple-100/20">
               <div className="space-y-6">
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-gray-700">
@@ -267,22 +198,74 @@ export default function Index() {
                   </Dialog>
 
                   {selectedDimensions && (
-                    <div className="rounded-xl bg-blue-50/50 p-4 text-sm text-blue-800 border border-blue-100">
+                    <div className="rounded-xl bg-purple-50/50 p-4 text-sm text-purple-800 border border-purple-100">
                       <p className="font-medium mb-1">{selectedDimensions.country} Visa Photo Requirements:</p>
-                      <p className="text-blue-700/90">{selectedDimensions.description}</p>
+                      <p className="text-purple-700/90">{selectedDimensions.description}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <Button
-                    onClick={handleCrop}
+                    onClick={() => handleCrop(false)}
                     disabled={!originalImage || !selectedCountry || isProcessing}
-                    className="w-full py-6 text-base font-medium"
+                    className="w-full py-6 text-base font-medium bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                   >
                     <ImageIcon className="mr-2 h-5 w-5" />
-                    {isProcessing ? 'Processing...' : 'Crop Image'}
+                    {isProcessing ? 'Processing...' : 'Auto Crop Image'}
                   </Button>
+
+                  <Button
+                    onClick={() => setManualCropOpen(true)}
+                    disabled={!originalImage || !selectedCountry || isProcessing}
+                    variant="outline"
+                    className="w-full py-6 text-base font-medium"
+                  >
+                    <Crop className="mr-2 h-5 w-5" />
+                    Manual Crop
+                  </Button>
+
+                  <Dialog open={manualCropOpen} onOpenChange={setManualCropOpen}>
+                    <DialogContent className="max-w-[90vw] w-full">
+                      <DialogTitle>Manual Crop</DialogTitle>
+                      <div className="space-y-6 p-4">
+                        <div className="space-y-4">
+                          <label className="block text-sm font-medium">
+                            Horizontal Position
+                          </label>
+                          <Slider
+                            value={[cropPosition.x]}
+                            onValueChange={(value) => setCropPosition(prev => ({ ...prev, x: value[0] }))}
+                            min={0}
+                            max={100}
+                            step={1}
+                          />
+                          <label className="block text-sm font-medium">
+                            Vertical Position
+                          </label>
+                          <Slider
+                            value={[cropPosition.y]}
+                            onValueChange={(value) => setCropPosition(prev => ({ ...prev, y: value[0] }))}
+                            min={0}
+                            max={100}
+                            step={1}
+                          />
+                        </div>
+                        <div className="relative w-full h-[60vh]">
+                          {originalImage && (
+                            <img
+                              src={originalImage}
+                              alt="Preview"
+                              className="w-full h-full object-contain"
+                            />
+                          )}
+                        </div>
+                        <Button onClick={() => handleCrop(true)} disabled={isProcessing}>
+                          {isProcessing ? 'Processing...' : 'Apply Manual Crop'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
 
                   {croppedImage && (
                     <div className="space-y-6">
@@ -300,19 +283,10 @@ export default function Index() {
                       </div>
                       <Button
                         onClick={handleDownload}
-                        variant="secondary"
-                        className={`w-full py-6 text-base font-medium ${
-                          hasPaid 
-                            ? 'bg-gray-900 text-white hover:bg-gray-800' 
-                            : 'bg-gray-100 text-gray-500'
-                        }`}
+                        className="w-full py-6 text-base font-medium bg-gradient-to-r from-gray-800 to-gray-700 hover:from-gray-900 hover:to-gray-800"
                       >
-                        {hasPaid ? (
-                          <Download className="mr-2 h-5 w-5" />
-                        ) : (
-                          <Lock className="mr-2 h-5 w-5" />
-                        )}
-                        {hasPaid ? 'Download Photo' : 'Purchase to Download'}
+                        <Download className="mr-2 h-5 w-5" />
+                        Download Photo
                       </Button>
                     </div>
                   )}
